@@ -1,0 +1,305 @@
+= 测量数据点
+
+:page-partial: true
+
+OpenEMS 中的测量数据点是系统监控和控制的核心。本文档详细介绍了 OpenEMS 中测量数据点的概念、实现和使用方法。
+
+== 核心概念
+
+在 OpenEMS 中，所有的测量数据都是通过 **Channel**（通道）来承载的。Channel 是 OpenEMS 系统中所有传感器数据、设备参数和计算值的统一抽象。
+
+每个 Channel 代表一个独立的测量量，例如电压、电流、功率、温度等。Channel 提供了一致的接口来访问和操作这些数据，无论数据来源如何。
+
+== Channel 分类
+
+根据不同的标准，Channel 可以分为多种类型：
+
+=== 按访问模式分类
+
+|=== =
+| 类型 | 描述 | 示例
+
+| READ_ONLY | 只读通道，数据来自设备采集或计算 | 电网电压、电池 SOC
+
+| WRITE_ONLY | 只写通道，用于控制设备 | 逆变器功率限制
+
+| READ_WRITE | 可读写通道，兼具测量和控制功能 | 设备设定值
+|=== =
+
+=== 按数据来源分类
+
+|=== =
+| 类型 | 描述 | 示例
+
+| 设备通道 | 直接从物理设备采集的数据 | Modbus 设备的电流、电压
+
+| 内部计算通道 | 通过内部算法计算得到的数据 | 总功率（各支路功率之和）
+
+| 虚拟通道 | 用于聚合或转换其他通道数据 | 电池系统的总 SOC
+|=== =
+
+=== 按数据类型分类
+
+|=== =
+| 类型 | 描述 | 示例
+
+| IntegerReadChannel | 整数类型通道 | 温度、电流
+
+| LongReadChannel | 长整数类型通道 | 累计电能
+
+| FloatReadChannel | 浮点数类型通道 | 功率因数
+
+| DoubleReadChannel | 双精度浮点数类型通道 | 精确测量值
+
+| BooleanReadChannel | 布尔类型通道 | 设备状态
+
+| StringReadChannel | 字符串类型通道 | 设备型号
+|=== =
+
+== Channel 核心属性
+
+每个 Channel 都具有以下核心属性：
+
+|=== =
+| 属性 | 描述 | 示例
+
+| ChannelId | 通道标识符，在组件内唯一 | `ACTIVE_POWER`
+
+| OpenemsType | 数据类型 | `INTEGER`, `LONG`, `DOUBLE`
+
+| Unit | 物理单位 | `V`, `A`, `kW`
+
+| AccessMode | 访问模式 | `READ_ONLY`, `WRITE_ONLY`, `READ_WRITE`
+
+| PersistencePriority | 持久化优先级 | `HIGH`, `MEDIUM`, `LOW`
+
+| IsEnabled | 是否启用 | `true`, `false`
+
+| LastValue | 最新测量值 | `230`（V）
+
+| LastUpdateTime | 最后更新时间 | `2023-05-20T14:30:00Z`
+|=== =
+
+== 数据点命名规范
+
+OpenEMS 使用统一的命名规则来标识 Channel，格式为：
+
+```
+ComponentId/Path/Metric
+```
+
+* **ComponentId**：组件的唯一标识符
+* **Path**：通道的路径，用于区分不同功能模块
+* **Metric**：具体的测量指标
+
+=== 示例
+
+|=== =
+| 完整名称 | 组件ID | 路径 | 指标 | 描述
+
+| `Ess0/Ac/ActivePower` | `Ess0` | `Ac` | `ActivePower` | 储能系统 0 的交流侧有功功率
+
+| `GridMeter/Ac/L1/Voltage` | `GridMeter` | `Ac/L1` | `Voltage` | 电网电表的 L1 相电压
+
+| `PvInverter0/Dc/String0/Power` | `PvInverter0` | `Dc/String0` | `Power` | 光伏逆变器 0 的直流侧 String 0 功率
+|=== =
+
+== 在代码中定义和使用测量数据点
+
+### 定义 Channel
+
+在 OpenEMS 中，通常通过枚举（Enum）来定义组件的 Channel。以下是一个示例：
+
+```java
+public interface MyComponent extends OpenemsComponent {
+    
+    public enum ChannelId implements io.openems.edge.common.channel.ChannelId {
+        
+        /**
+         * Active Power.
+         * 
+         * <ul>
+         * <li>Type: {@link OpenemsType#INTEGER}
+         * <li>Unit: {@link Unit#WATT}
+         * <li>Range: [-10000, 10000]
+         * </ul>
+         */
+        ACTIVE_POWER(Doc.of(OpenemsType.INTEGER)
+                .unit(Unit.WATT)
+                .range(-10000, 10000)
+                .persistencePriority(PersistencePriority.HIGH)),
+        
+        /**
+         * Voltage.
+         * 
+         * <ul>
+         * <li>Type: {@link OpenemsType#INTEGER}
+         * <li>Unit: {@link Unit#VOLT}
+         * <li>Range: [0, 500]
+         * </ul>
+         */
+        VOLTAGE(Doc.of(OpenemsType.INTEGER)
+                .unit(Unit.VOLT)
+                .range(0, 500)
+                .persistencePriority(PersistencePriority.HIGH));
+        
+        private final Doc doc;
+        
+        private ChannelId(Doc doc) {
+            this.doc = doc;
+        }
+        
+        @Override
+        public Doc doc() {
+            return this.doc;
+        }
+    }
+    
+    // 获取 Channel 的默认方法
+    public default IntegerReadChannel getActivePowerChannel() {
+        return this.channel(ChannelId.ACTIVE_POWER);
+    }
+    
+    public default IntegerReadChannel getVoltageChannel() {
+        return this.channel(ChannelId.VOLTAGE);
+    }
+}
+```
+
+### 获取 Channel 数值
+
+在控制器或其他组件中，可以通过以下方式获取 Channel 的数值：
+
+```java
+// 获取组件实例
+MyComponent myComponent = this.componentManager.getComponent("myComponentId");
+
+// 获取 Channel
+IntegerReadChannel activePowerChannel = myComponent.getActivePowerChannel();
+
+// 获取 Channel 值（如果值未定义，返回默认值）
+int activePower = activePowerChannel.value().orElse(0);
+
+// 获取 Channel 值（如果值未定义，抛出异常）
+try {
+    int activePower = activePowerChannel.value().getOrError();
+} catch (InvalidValueException e) {
+    // 处理值未定义的情况
+}
+```
+
+## 数据存储和转发
+
+OpenEMS 提供了多种机制来存储和转发测量数据：
+
+### 数据持久化
+
+OpenEMS 使用 **TimeData** 服务来持久化测量数据。常用的 TimeData 实现包括：
+
+* **InfluxDB**：高性能时序数据库，适合大规模数据存储和分析
+* **RRD4J**：轻量级时序数据库，适合资源受限的环境
+
+数据持久化的频率取决于 Channel 的 `PersistencePriority`：
+
+|=== =
+| 优先级 | 描述 | 持久化频率
+
+| HIGH | 高优先级，需要频繁持久化 | 每个 Cycle（通常 1 秒）
+
+| MEDIUM | 中优先级，定期持久化 | 每 5-60 秒
+
+| LOW | 低优先级，按需持久化 | 不自动持久化
+|=== =
+
+### 数据转发
+
+OpenEMS 可以通过多种方式将测量数据转发到外部系统：
+
+* **WebSocket API**：实时数据推送
+* **REST API**：按需数据查询
+* **MQTT**：物联网标准协议
+* **Modbus TCP**：工业自动化标准协议
+
+## 测量数据点更新机制
+
+OpenEMS 采用事件驱动的方式更新测量数据：
+
+1. **设备驱动**：通过 Modbus、REST API 等协议从物理设备采集数据
+2. **数据更新**：设备驱动调用 `Channel.setNextValue()` 方法更新 Channel 的下一个值
+3. **过程映像**：在每个 Cycle 开始时，系统将所有 Channel 的下一个值复制到当前值，形成一致的过程映像
+4. **事件通知**：如果 Channel 值发生变化，系统触发 `ValueChangedEvent` 事件
+5. **控制器执行**：控制器基于当前的过程映像执行控制算法
+
+这种机制确保了在一个 Cycle 内所有数据的一致性，避免了并发问题。
+
+## 常用测量数据点类型
+
+### 电力系统常用数据点
+
+|=== =
+| 数据点 | 单位 | 描述
+
+| Voltage | V | 电压
+
+| Current | A | 电流
+
+| ActivePower | W | 有功功率
+
+| ReactivePower | var | 无功功率
+
+| ApparentPower | VA | 视在功率
+
+| Frequency | Hz | 频率
+
+| PowerFactor | - | 功率因数
+
+| EnergyActive | Wh | 有功电能
+
+| EnergyReactive | varh | 无功电能
+|=== =
+
+### 电池系统常用数据点
+
+|=== =
+| 数据点 | 单位 | 描述
+
+| SOC | % | 荷电状态
+
+| SOH | % | 健康状态
+
+| Temperature | °C | 温度
+
+| Capacity | Wh | 容量
+
+| ChargeCurrent | A | 充电电流
+
+| DischargeCurrent | A | 放电电流
+|=== =
+
+### 光伏系统常用数据点
+
+|=== =
+| 数据点 | 单位 | 描述
+
+| DcVoltage | V | 直流电压
+
+| DcCurrent | A | 直流电流
+
+| DcPower | W | 直流功率
+
+| AcActivePower | W | 交流有功功率
+
+| Irradiation | W/m² | 辐照度
+|=== =
+
+## 总结
+
+OpenEMS 的测量数据点架构基于 Channel 概念，提供了统一的数据模型和访问接口。这种设计具有以下优势：
+
+1. **一致性**：所有测量数据使用相同的接口访问
+2. **可靠性**：过程映像机制确保数据一致性
+3. **灵活性**：支持多种数据类型和访问模式
+4. **可扩展性**：便于添加新的测量点类型
+5. **高性能**：事件驱动的更新机制
+
+通过深入理解 OpenEMS 的测量数据点架构，开发人员可以更有效地开发和扩展 OpenEMS 系统，实现对能源设备的精确监控和控制。
