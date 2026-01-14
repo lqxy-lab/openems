@@ -57,27 +57,50 @@ OpenEMS 中所有测量数据点的核心抽象是 `Channel`，是传感器采�
 
 ### 2.1.1 基础电参数（三相测量）
 
-|ChannelId|描述|单位|
-|---|---|---|
-|GridMeter0/Ac/L1/Voltage|L1相电压|V|
-|GridMeter0/Ac/L1/Current|L1相电流|A|
-|GridMeter0/Ac/ActivePower|总有功功率（正值=购入，负值=售出）|kW|
-|GridMeter0/Ac/ReactivePower|总无功功率|kVar|
-|GridMeter0/Ac/Frequency|电网频率|Hz|
-|GridMeter0/Ac/PowerFactor|总功率因数|无量纲|
+|ChannelId|描述|单位|Java通道名称|
+|---|---|---|---|
+|GridMeter0/Ac/ActivePower|总有功功率（正值=购入，负值=售出）|kW|ACTIVE_POWER|
+|GridMeter0/Ac/ActivePowerL1|L1相有功功率|kW|ACTIVE_POWER_L1|
+|GridMeter0/Ac/ActivePowerL2|L2相有功功率|kW|ACTIVE_POWER_L2|
+|GridMeter0/Ac/ActivePowerL3|L3相有功功率|kW|ACTIVE_POWER_L3|
+|GridMeter0/Ac/ReactivePower|总无功功率|kVar|REACTIVE_POWER|
+|GridMeter0/Ac/ReactivePowerL1|L1相无功功率|kVar|REACTIVE_POWER_L1|
+|GridMeter0/Ac/ReactivePowerL2|L2相无功功率|kVar|REACTIVE_POWER_L2|
+|GridMeter0/Ac/ReactivePowerL3|L3相无功功率|kVar|REACTIVE_POWER_L3|
+|GridMeter0/Ac/Voltage|系统电压|V|VOLTAGE|
+|GridMeter0/Ac/L1/Voltage|L1相电压|V|VOLTAGE_L1|
+|GridMeter0/Ac/L2/Voltage|L2相电压|V|VOLTAGE_L2|
+|GridMeter0/Ac/L3/Voltage|L3相电压|V|VOLTAGE_L3|
+|GridMeter0/Ac/Current|总电流|A|CURRENT|
+|GridMeter0/Ac/L1/Current|L1相电流|A|CURRENT_L1|
+|GridMeter0/Ac/L2/Current|L2相电流|A|CURRENT_L2|
+|GridMeter0/Ac/L3/Current|L3相电流|A|CURRENT_L3|
+|GridMeter0/Ac/Frequency|电网频率|Hz|FREQUENCY|
+|GridMeter0/Ac/PowerFactor|总功率因数|无量纲|（由功率和电压计算得出）|
 ### 2.1.2 电能计量参数（双向）
 
-|ChannelId|描述|单位|
-|---|---|---|
-|GridMeter0/Ac/Energy/Active/Import|当日购入有功电能|kWh|
-|GridMeter0/Ac/Energy/Active/Export|当日售出有功电能|kWh|
-|GridMeter0/Ac/Energy/Active/ImportTotal|累计购入有功电能|kWh|
+|ChannelId|描述|单位|Java通道名称|
+|---|---|---|---|
+|GridMeter0/Ac/Energy/Active/Import|累计购入有功电能|kWh|ACTIVE_CONSUMPTION_ENERGY|
+|GridMeter0/Ac/Energy/Active/ImportL1|L1相累计购入有功电能|kWh|ACTIVE_CONSUMPTION_ENERGY_L1|
+|GridMeter0/Ac/Energy/Active/ImportL2|L2相累计购入有功电能|kWh|ACTIVE_CONSUMPTION_ENERGY_L2|
+|GridMeter0/Ac/Energy/Active/ImportL3|L3相累计购入有功电能|kWh|ACTIVE_CONSUMPTION_ENERGY_L3|
+|GridMeter0/Ac/Energy/Active/Export|累计售出有功电能|kWh|ACTIVE_PRODUCTION_ENERGY|
+|GridMeter0/Ac/Energy/Active/ExportL1|L1相累计售出有功电能|kWh|ACTIVE_PRODUCTION_ENERGY_L1|
+|GridMeter0/Ac/Energy/Active/ExportL2|L2相累计售出有功电能|kWh|ACTIVE_PRODUCTION_ENERGY_L2|
+|GridMeter0/Ac/Energy/Active/ExportL3|L3相累计售出有功电能|kWh|ACTIVE_PRODUCTION_ENERGY_L3|
 ### 2.1.3 电能质量参数
 
-|ChannelId|描述|单位|
-|---|---|---|
-|GridMeter0/Ac/VoltageTHD|电压总谐波畸变率|%|
-|GridMeter0/Ac/CurrentUnbalance|电流不平衡度|%|
+|ChannelId|描述|单位|Java通道名称|
+|---|---|---|---|
+|GridMeter0/Ac/VoltageTHD|电压总谐波畸变率|%|（扩展通道）|
+|GridMeter0/Ac/CurrentUnbalance|电流不平衡度|%|（扩展通道）|
+|GridMeter0/Ac/VoltageL1THD|L1相电压总谐波畸变率|%|（扩展通道）|
+|GridMeter0/Ac/VoltageL2THD|L2相电压总谐波畸变率|%|（扩展通道）|
+|GridMeter0/Ac/VoltageL3THD|L3相电压总谐波畸变率|%|（扩展通道）|
+|GridMeter0/Ac/CurrentL1THD|L1相电流总谐波畸变率|%|（扩展通道）|
+|GridMeter0/Ac/CurrentL2THD|L2相电流总谐波畸变率|%|（扩展通道）|
+|GridMeter0/Ac/CurrentL3THD|L3相电流总谐波畸变率|%|（扩展通道）|
 ## 2.2 光伏参数（PvInverter/PvArray 组件）
 
 覆盖直流侧发电特性、交流侧并网参数、能量计量、设备状态及环境监测，核心支撑光伏出力评估与优化。
